@@ -99,7 +99,7 @@ class ReferralPipeline:
         search_query = f"{job_keywords} {company}".strip() if company else job_keywords
         co_log = f" at company '{company}'" if company else ""
 
-        emit_progress("Searching LinkedIn Jobs", 10)
+        emit_progress("Searching LinkedIn Jobs...", 15)
         emit_log(f"Searching LinkedIn for '{search_query}' in region: '{location}'{co_log} (Date Posted: {date_label})...")
 
         jobs = self.job_finder.search_jobs(
@@ -109,7 +109,7 @@ class ReferralPipeline:
             date_filter=date_filter
         )
         emit_log(f"Discovered {len(jobs)} relevant job listings from LinkedIn.")
-        emit_progress("Analyzing & Pitching via Parallel Workers", 30)
+        emit_progress("Analyzing Target Contacts & Scraped Profiles...", 35)
 
         messages: List[OutreachMessage] = []
         total_jobs = len(jobs)
@@ -118,7 +118,7 @@ class ReferralPipeline:
         def process_job(job_tuple):
             idx, job = job_tuple
             date_info = f" (Posted: {job.posted_date})" if job.posted_date else ""
-            emit_log(f"[{idx}/{total_jobs}] Found {job.title} at {job.company_name} ({job.location}){date_info}")
+            emit_log(f"[{idx}/{total_jobs}] Processing {job.title} at {job.company_name} ({job.location}){date_info}")
             
             contacts = self.contact_finder.find_contacts_for_job(
                 job, max_contacts=contacts_per_job, position_dork=position_dork
@@ -154,8 +154,8 @@ class ReferralPipeline:
                     logger.warning(f"Error in worker thread: {e}")
                 
                 completed_count += 1
-                current_pct = int(30 + (completed_count / max(total_jobs, 1)) * 65)
-                emit_progress("Drafting AI Referral Pitches", min(current_pct, 95))
+                current_pct = int(35 + (completed_count / max(total_jobs, 1)) * 60)
+                emit_progress("Drafting AI Referral Pitches...", min(current_pct, 95))
 
             for i in sorted(results_dict.keys()):
                 messages.extend(results_dict[i])

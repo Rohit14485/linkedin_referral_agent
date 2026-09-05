@@ -231,7 +231,11 @@
           <h2 class="text-base font-semibold text-white">Generated Referral Outreach Drafts</h2>
           <p class="text-xs text-slate-400">Review, customize the recipient's name & email, and approve pitches before sending.</p>
         </div>
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2 flex-wrap gap-2">
+          <button onclick="openBatchInGmailApp()" class="bg-red-700 hover:bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-lg shadow-red-700/20 transition flex items-center space-x-1.5" title="Open Android/iOS Gmail App pre-filled with all recipients">
+            <i class="fa-solid fa-envelope-open-text text-xs"></i>
+            <span>📱 Gmail App (Mobile)</span>
+          </button>
           <button id="approveAllBtn" onclick="approveAllDrafts()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center space-x-1.5">
             <i class="fa-solid fa-paper-plane"></i>
             <span>Approve & Send All</span>
@@ -741,7 +745,11 @@
               <button onclick="saveDraftEdits(${idx})" class="text-xs text-slate-400 hover:text-white transition">
                 <i class="fa-solid fa-floppy-disk mr-1"></i> Save Changes
               </button>
-              <div class="flex space-x-2">
+              <div class="flex space-x-2 flex-wrap gap-1">
+                <button onclick="openInGmailApp(${idx})" class="px-2.5 py-1.5 rounded-lg text-xs bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 transition flex items-center space-x-1" title="Open Gmail App on Android / iOS">
+                  <i class="fa-solid fa-envelope-open-text text-[11px] text-red-400"></i>
+                  <span>Gmail App</span>
+                </button>
                 <button onclick="skipDraft(${idx})" class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white transition">
                   Skip
                 </button>
@@ -988,6 +996,43 @@
           btn.innerHTML = origHtml;
         }
       }
+    }
+
+    function openInGmailApp(idx) {
+      if (!draftsStore || !draftsStore[idx]) return;
+      const subject = document.getElementById(`subject-${idx}`)?.value || draftsStore[idx].subject;
+      const body = document.getElementById(`body-${idx}`)?.value || draftsStore[idx].body;
+      const email = document.getElementById(`email-${idx}`)?.value || draftsStore[idx].recipient.email;
+
+      const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      appendLog('INFO', `📱 Launching Android / iOS Gmail App for ${email}...`);
+      window.location.href = mailtoUrl;
+    }
+
+    function openBatchInGmailApp() {
+      if (!draftsStore || draftsStore.length === 0) {
+        alert("No drafts available. Run a job search first!");
+        return;
+      }
+      const recipients = [];
+      for (let idx = 0; idx < draftsStore.length; idx++) {
+        if (draftsStore[idx].status !== 'SKIPPED') {
+          const email = document.getElementById(`email-${idx}`)?.value || draftsStore[idx].recipient.email;
+          if (email && email.includes('@')) recipients.push(email);
+        }
+      }
+      if (recipients.length === 0) {
+        alert("No active draft email recipients found.");
+        return;
+      }
+
+      const firstDraft = draftsStore[0];
+      const subject = `Application & Referral Inquiry - AI Engineer Role`;
+      const body = `Dear Hiring Team,\n\nI am writing to express my strong interest in AI Engineer & tech opportunities at your organization.\n\nSummary of Profile:\n- 2+ years experience building Agentic AI systems, LangChain/LangGraph, Snowflake Cortex AI, RAG & LLMs.\n- Claude Certified Architect & Developer.\n\nPlease visit my LinkedIn profile: ${firstDraft.recipient.linkedin_url || 'https://www.linkedin.com/in/rohit-raj-gupta-05aa9821b'}\n\nBest regards,\nRohit Raj Gupta`;
+
+      const mailtoUrl = `mailto:${encodeURIComponent(recipients.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      appendLog('INFO', `📱 Launching Android / iOS Gmail App with ${recipients.length} target contact(s)...`);
+      window.location.href = mailtoUrl;
     }
 
     async function skipDraft(idx) {

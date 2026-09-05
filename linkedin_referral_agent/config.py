@@ -15,11 +15,12 @@ class Settings(BaseSettings):
     OUTBOX_DIR: str = "outbox"
     REQUEST_DELAY_SECONDS: float = 1.5
 
-    # Email / SMTP Settings
+    # Email / SMTP Settings & HTTP REST API (Resend / SendGrid)
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
+    RESEND_API_KEY: Optional[str] = None
     SENDER_NAME: str = "Job Applicant"
     SENDER_EMAIL: str = ""
 

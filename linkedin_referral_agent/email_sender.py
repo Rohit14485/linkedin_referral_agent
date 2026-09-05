@@ -8,6 +8,8 @@ import json
 import logging
 import os
 import smtplib
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from email.message import EmailMessage
 from pathlib import Path
@@ -25,6 +27,7 @@ class EmailSender:
         smtp_port: int = 587,
         smtp_user: str = "",
         smtp_password: str = "",
+        resend_api_key: Optional[str] = None,
         sender_name: str = "Job Applicant",
         sender_email: str = "",
         dry_run: bool = True,
@@ -34,6 +37,7 @@ class EmailSender:
         self.smtp_port = smtp_port
         self.smtp_user = smtp_user
         self.smtp_password = smtp_password
+        self.resend_api_key = resend_api_key or os.environ.get("RESEND_API_KEY")
         self.sender_name = sender_name
         self.sender_email = sender_email or smtp_user or "applicant@example.com"
         self.dry_run = dry_run
@@ -78,6 +82,9 @@ class EmailSender:
                 message.sent_at = datetime.utcnow()
                 logger.info(f"[DRY-RUN] Saved draft for {message.recipient.email} to outbox.")
                 return True
+
+            if self.resend_api_key:
+                return self._send_via_resend(message)
 
             if not self.smtp_user or not self.smtp_password:
                 err = "Cannot send live email: SMTP_USER or SMTP_PASSWORD not configured."
@@ -140,3 +147,38 @@ class EmailSender:
         }
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
+
+    def _send_via_resend(self, message: OutreachMessage) -> bool:
+        try:
+            url = "https://api.resend.com/emails"
+            payload = {
+                "from": f"{self.sender_name} <onboarding@resend.dev>",
+                "to": [message.recipient.email],
+                "subject": message.subject,
+                "text": message.body
+            }
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url, data=data,
+                headers={
+                    "Authorization": f"Bearer {self.resend_api_key}",
+                    "Content-Type": "application/json"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status in [200, 201]:
+                    message.status = OutreachStatus.SENT
+                    message.sent_at = datetime.utcnow()
+                    logger.info(f"Successfully sent email via Resend HTTPS API to {message.recipient.email}")
+                    return True
+                else:
+                    err = f"Resend API returned status {resp.status}"
+                    message.status = OutreachStatus.FAILED
+                    message.error_message = err
+                    return False
+        except Exception as e:
+            logger.error(f"Resend HTTPS API error: {e}")
+            message.status = OutreachStatus.FAILED
+            message.error_message = f"Resend API Error: {e}"
+            return False

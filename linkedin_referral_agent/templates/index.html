@@ -232,6 +232,10 @@
           <p class="text-xs text-slate-400">Review, customize the recipient's name & email, and approve pitches before sending.</p>
         </div>
         <div class="flex items-center space-x-2 flex-wrap gap-2">
+          <button onclick="openSequentialTabsAuto()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-lg shadow-indigo-600/20 transition flex items-center space-x-1.5" title="Automatically opens each draft pre-filled in a separate email tab/app sequentially">
+            <i class="fa-solid fa-bolt text-amber-300 text-xs"></i>
+            <span>⚡ Auto Multi-Tab Send</span>
+          </button>
           <button onclick="openBatchInGmailApp()" class="bg-red-700 hover:bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-lg shadow-red-700/20 transition flex items-center space-x-1.5" title="Open Android/iOS Gmail App pre-filled with all recipients">
             <i class="fa-solid fa-envelope-open-text text-xs"></i>
             <span>📱 Gmail App (Mobile)</span>
@@ -380,6 +384,13 @@
               <div>
                 <label class="block text-xs text-slate-400 mb-1">Google App Password (16-chars)</label>
                 <input type="password" id="settingSmtpPassword" placeholder="••••••••••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+              <div class="md:col-span-2 pt-2 border-t border-slate-800">
+                <label class="block text-xs text-amber-400 font-semibold mb-1">
+                  <i class="fa-solid fa-cloud text-amber-400 mr-1"></i> Resend HTTP API Key (Optional Cloud Bypass - resend.com)
+                </label>
+                <input type="password" id="settingResendKey" placeholder="re_123456789..." class="w-full bg-slate-950 border border-amber-900/60 rounded-lg px-3 py-2 text-xs text-amber-200">
+                <p class="text-[10px] text-slate-500 mt-1">Allows 100% automated background email sending from Render cloud without any SMTP port blocking.</p>
               </div>
             </div>
           </div>
@@ -1035,6 +1046,29 @@
       window.location.href = mailtoUrl;
     }
 
+    function openSequentialTabsAuto() {
+      if (!draftsStore || draftsStore.length === 0) {
+        alert("No drafts available to dispatch. Launch a search first!");
+        return;
+      }
+
+      appendLog('INFO', `⚡ Auto multi-tab dispatcher started for ${draftsStore.length} draft(s)...`);
+      
+      draftsStore.forEach((draft, idx) => {
+        if (draft.status !== 'SKIPPED') {
+          setTimeout(() => {
+            const subject = document.getElementById(`subject-${idx}`)?.value || draft.subject;
+            const body = document.getElementById(`body-${idx}`)?.value || draft.body;
+            const email = document.getElementById(`email-${idx}`)?.value || draft.recipient.email;
+
+            const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            appendLog('SUCCESS', `⚡ Auto-dispatching tab #${idx + 1} for ${email}...`);
+            window.open(mailtoUrl, '_blank');
+          }, idx * 1200);
+        }
+      });
+    }
+
     async function skipDraft(idx) {
       try {
         await fetch(`/api/drafts/${idx}/skip`, { method: 'POST' });
@@ -1098,6 +1132,7 @@
         document.getElementById('settingApolloKey').value = data.APOLLO_API_KEY || "";
         document.getElementById('settingHunterKey').value = data.HUNTER_API_KEY || "";
         document.getElementById('settingSerperKey').value = data.SERPER_API_KEY || "";
+        document.getElementById('settingResendKey').value = data.RESEND_API_KEY || "";
         document.getElementById('settingSmtpPassword').value = data.SMTP_PASSWORD || "";
 
         updateModeBadge(data.DRY_RUN);
@@ -1126,6 +1161,7 @@
         SMTP_PORT: parseInt(document.getElementById('settingSmtpPort').value, 10),
         SMTP_USER: document.getElementById('settingSmtpUser').value,
         SMTP_PASSWORD: document.getElementById('settingSmtpPassword').value,
+        RESEND_API_KEY: document.getElementById('settingResendKey').value,
         OPENAI_API_KEY: document.getElementById('settingAiKey').value,
         APOLLO_API_KEY: document.getElementById('settingApolloKey').value,
         HUNTER_API_KEY: document.getElementById('settingHunterKey').value,

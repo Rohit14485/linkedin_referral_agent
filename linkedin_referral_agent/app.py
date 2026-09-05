@@ -80,6 +80,7 @@ class SettingsUpdateRequest(BaseModel):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: Optional[str] = None
+    RESEND_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     APOLLO_API_KEY: Optional[str] = None
     HUNTER_API_KEY: Optional[str] = None
@@ -447,6 +448,7 @@ async def get_settings():
         "APOLLO_API_KEY": settings.APOLLO_API_KEY or "",
         "HUNTER_API_KEY": settings.HUNTER_API_KEY or "",
         "SERPER_API_KEY": settings.SERPER_API_KEY or "",
+        "RESEND_API_KEY": settings.RESEND_API_KEY or "",
         "SMTP_PASSWORD": settings.SMTP_PASSWORD or "",
     }
 
@@ -461,6 +463,7 @@ def persist_settings_to_env():
         f"SMTP_PORT={settings.SMTP_PORT}",
         f"SMTP_USER={settings.SMTP_USER}",
         f"SMTP_PASSWORD={settings.SMTP_PASSWORD or ''}",
+        f"RESEND_API_KEY={settings.RESEND_API_KEY or ''}",
         f"SENDER_NAME={settings.SENDER_NAME}",
         f"SENDER_EMAIL={settings.SENDER_EMAIL or settings.SMTP_USER}",
         f"DEFAULT_RESUME_PATH={settings.DEFAULT_RESUME_PATH}",
@@ -486,6 +489,8 @@ async def update_settings(req: SettingsUpdateRequest):
     settings.SMTP_USER = req.SMTP_USER
     if req.SMTP_PASSWORD:
         settings.SMTP_PASSWORD = req.SMTP_PASSWORD
+    if req.RESEND_API_KEY:
+        settings.RESEND_API_KEY = req.RESEND_API_KEY
     if req.OPENAI_API_KEY:
         settings.OPENAI_API_KEY = req.OPENAI_API_KEY
     if req.APOLLO_API_KEY:

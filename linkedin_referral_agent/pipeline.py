@@ -39,6 +39,7 @@ class ReferralPipeline:
             smtp_port=self.config.SMTP_PORT,
             smtp_user=self.config.SMTP_USER,
             smtp_password=self.config.SMTP_PASSWORD,
+            resend_api_key=self.config.RESEND_API_KEY,
             sender_name=self.config.SENDER_NAME,
             sender_email=self.config.SENDER_EMAIL,
             dry_run=self.config.DRY_RUN,

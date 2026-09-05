@@ -78,6 +78,12 @@ class ReferralPipeline:
                     pass
 
         date_label_map = {
+            "r3600": "Past 1 Hour",
+            "past_1h": "Past 1 Hour",
+            "r21600": "Past 6 Hours",
+            "past_6h": "Past 6 Hours",
+            "r43200": "Past 12 Hours",
+            "past_12h": "Past 12 Hours",
             "r86400": "Past 24 Hours",
             "past_24h": "Past 24 Hours",
             "r604800": "Past Week",

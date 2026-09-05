@@ -31,10 +31,16 @@ class JobFinder:
 
     # Time filter mappings
     DATE_FILTERS = {
+        "past_1h": "r3600",
+        "past_6h": "r21600",
+        "past_12h": "r43200",
         "past_24h": "r86400",
         "past_week": "r604800",
         "past_month": "r2592000",
         "any": "",
+        "r3600": "r3600",
+        "r21600": "r21600",
+        "r43200": "r43200",
         "r86400": "r86400",
         "r604800": "r604800",
         "r2592000": "r2592000",

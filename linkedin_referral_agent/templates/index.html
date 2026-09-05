@@ -232,7 +232,7 @@
           <p class="text-xs text-slate-400">Review, customize the recipient's name & email, and approve pitches before sending.</p>
         </div>
         <div class="flex items-center space-x-3">
-          <button onclick="approveAllDrafts()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center space-x-1.5">
+          <button id="approveAllBtn" onclick="approveAllDrafts()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center space-x-1.5">
             <i class="fa-solid fa-paper-plane"></i>
             <span>Approve & Send All</span>
           </button>
@@ -809,14 +809,60 @@
     }
 
     async function approveAllDrafts() {
+      if (!draftsStore || draftsStore.length === 0) {
+        appendLog('WARNING', 'No pending drafts available to send.');
+        alert('No drafts available to send. Run a job search first!');
+        return;
+      }
+
+      const btn = document.getElementById('approveAllBtn');
+      const origHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending All...`;
+      }
+
       try {
-        appendLog('INFO', 'Dispatching all pending drafts...');
+        // Save form modifications from draft cards before send-all
+        for (let idx = 0; idx < draftsStore.length; idx++) {
+          const subjectEl = document.getElementById(`subject-${idx}`);
+          const bodyEl = document.getElementById(`body-${idx}`);
+          const fnameEl = document.getElementById(`fname-${idx}`);
+          const lnameEl = document.getElementById(`lname-${idx}`);
+          const emailEl = document.getElementById(`email-${idx}`);
+
+          if (subjectEl && bodyEl && fnameEl && lnameEl && emailEl) {
+            await fetch(`/api/drafts/${idx}/update`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                subject: subjectEl.value,
+                body: bodyEl.value,
+                first_name: fnameEl.value,
+                last_name: lnameEl.value,
+                email: emailEl.value
+              })
+            });
+          }
+        }
+
+        appendLog('INFO', `Dispatching all ${draftsStore.length} draft(s)...`);
         const res = await fetch('/api/drafts/send-all', { method: 'POST' });
         const data = await res.json();
-        appendLog('SUCCESS', `Finished sending: ${data.sent} sent, ${data.failed} failed.`);
-        fetchDrafts();
+
+        if (res.ok) {
+          appendLog('SUCCESS', `Finished batch sending: ${data.sent} sent, ${data.failed} failed.`);
+        } else {
+          appendLog('ERROR', `Batch send failed: ${data.detail || 'Server error'}`);
+        }
+        await fetchDrafts();
       } catch (err) {
         appendLog('ERROR', `Error in batch send: ${err.message}`);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+        }
       }
     }
 

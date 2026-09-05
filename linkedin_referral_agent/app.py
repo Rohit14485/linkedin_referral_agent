@@ -99,15 +99,27 @@ async def broadcast_event(event_type: str, data: Dict[str, Any]):
 
 
 def sync_broadcast_log(level: str, msg: str):
-    asyncio.run(broadcast_event("log", {"level": level, "message": msg}))
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(broadcast_event("log", {"level": level, "message": msg}))
+    except RuntimeError:
+        asyncio.run(broadcast_event("log", {"level": level, "message": msg}))
 
 
 def sync_broadcast_progress(stage: str, percent: int):
-    asyncio.run(broadcast_event("progress", {"stage": stage, "percent": percent}))
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(broadcast_event("progress", {"stage": stage, "percent": percent}))
+    except RuntimeError:
+        asyncio.run(broadcast_event("progress", {"stage": stage, "percent": percent}))
 
 
 def sync_broadcast_draft(draft: OutreachMessage):
-    asyncio.run(broadcast_event("draft", {"recipient": draft.recipient.email}))
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(broadcast_event("draft", {"recipient": draft.recipient.email}))
+    except RuntimeError:
+        asyncio.run(broadcast_event("draft", {"recipient": draft.recipient.email}))
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -342,8 +354,10 @@ async def send_draft(index: int, req: Optional[DraftUpdateRequest] = None):
 
     msg = active_drafts[index]
     if req:
-        msg.subject = req.subject
-        msg.body = req.body
+        if req.subject:
+            msg.subject = req.subject
+        if req.body:
+            msg.body = req.body
         if req.first_name:
             msg.recipient.first_name = req.first_name.strip()
         if req.last_name:
@@ -353,12 +367,16 @@ async def send_draft(index: int, req: Optional[DraftUpdateRequest] = None):
             msg.recipient.verification_source = VerificationSource.MANUAL
 
     pipeline = ReferralPipeline(config=settings)
-    success = pipeline.email_sender.send(msg, resume_path=settings.DEFAULT_RESUME_PATH)
+    sync_broadcast_log("INFO", f"Dispatching pitch to {msg.recipient.full_name} <{msg.recipient.email}>...")
+    
+    success = await asyncio.to_thread(pipeline.email_sender.send, msg, resume_path=settings.DEFAULT_RESUME_PATH)
 
     if not success:
+        sync_broadcast_log("ERROR", f"🔴 Dispatch failed for {msg.recipient.email}: {msg.error_message or 'Unknown error'}")
         raise HTTPException(status_code=500, detail=msg.error_message or "Email send failed")
 
     dest = "Outbox (.eml/.json)" if settings.DRY_RUN else "Recipient Inbox"
+    sync_broadcast_log("SUCCESS", f"🟢 Successfully dispatched pitch to {msg.recipient.full_name} <{msg.recipient.email}> -> {dest}")
     return {
         "status": "sent",
         "recipient": msg.recipient.email,
@@ -369,18 +387,31 @@ async def send_draft(index: int, req: Optional[DraftUpdateRequest] = None):
 
 @app.post("/api/drafts/send-all")
 async def send_all_drafts():
+    if not active_drafts:
+        return {"status": "completed", "sent": 0, "failed": 0, "message": "No drafts available"}
+
     pipeline = ReferralPipeline(config=settings)
     sent_count = 0
     failed_count = 0
 
-    for msg in active_drafts:
-        if msg.status != OutreachStatus.SKIPPED:
-            success = pipeline.email_sender.send(msg, resume_path=settings.DEFAULT_RESUME_PATH)
-            if success:
-                sent_count += 1
-            else:
-                failed_count += 1
+    sync_broadcast_log("INFO", f"🚀 Batch sending triggered for {len(active_drafts)} draft(s)...")
 
+    for i, msg in enumerate(active_drafts):
+        if msg.status == OutreachStatus.SKIPPED:
+            sync_broadcast_log("WARNING", f"⏭️ Skipping draft #{i + 1} for {msg.recipient.email} (Status: SKIPPED)")
+            continue
+
+        sync_broadcast_log("INFO", f"Sending draft #{i + 1}/{len(active_drafts)} to {msg.recipient.full_name} <{msg.recipient.email}>...")
+        success = await asyncio.to_thread(pipeline.email_sender.send, msg, resume_path=settings.DEFAULT_RESUME_PATH)
+        if success:
+            sent_count += 1
+            dest = "Outbox (.eml/.json)" if settings.DRY_RUN else "Recipient Inbox"
+            sync_broadcast_log("SUCCESS", f"🟢 Approved & Sent #{i + 1}: {msg.recipient.full_name} <{msg.recipient.email}> -> {dest}")
+        else:
+            failed_count += 1
+            sync_broadcast_log("ERROR", f"🔴 Send Failed #{i + 1}: {msg.recipient.full_name} <{msg.recipient.email}> - {msg.error_message or 'Unknown error'}")
+
+    sync_broadcast_log("SUCCESS", f"🎉 Batch dispatch completed: {sent_count} sent, {failed_count} failed out of {len(active_drafts)} total.")
     return {"status": "completed", "sent": sent_count, "failed": failed_count}
 
 

@@ -97,6 +97,19 @@ class EmailSender:
             return True
 
         except Exception as e:
+            err_str = str(e)
+            if "101" in err_str or "unreachable" in err_str.lower() or "timed out" in err_str.lower() or "refused" in err_str.lower():
+                # Cloud host (Render/Vercel) blocks raw outbound SMTP sockets (Port 587/25)
+                self._save_to_outbox(message, email_msg, resume_path)
+                err_msg = (
+                    "🔴 Cloud Host Firewall Blocked SMTP: Render free tier blocks outbound SMTP port 587. "
+                    "Email preserved safely in Outbox (.eml). To send live Gmail emails, run the application locally on your Mac."
+                )
+                message.status = OutreachStatus.FAILED
+                message.error_message = err_msg
+                logger.error(f"Failed to send email to {message.recipient.email}: {err_msg}")
+                return False
+
             message.status = OutreachStatus.FAILED
             message.error_message = str(e)
             logger.error(f"Failed to send email to {message.recipient.email}: {e}")

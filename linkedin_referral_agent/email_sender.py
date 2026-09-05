@@ -52,8 +52,13 @@ class EmailSender:
         msg.set_content(message.body)
 
         # Attach resume if path exists
-        if resume_path and Path(resume_path).exists():
-            file_path = Path(resume_path)
+        target_resume = resume_path or "sample_data/Rohit_Raj_Gupta_resume-1.pdf"
+        if not Path(target_resume).exists() or "sample_resume.txt" in str(target_resume):
+            if Path("sample_data/Rohit_Raj_Gupta_resume-1.pdf").exists():
+                target_resume = "sample_data/Rohit_Raj_Gupta_resume-1.pdf"
+
+        if target_resume and Path(target_resume).exists():
+            file_path = Path(target_resume)
             try:
                 with open(file_path, "rb") as f:
                     content = f.read()

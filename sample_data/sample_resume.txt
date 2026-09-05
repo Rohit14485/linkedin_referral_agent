@@ -1,0 +1,26 @@
+ROHIT RAJ GUPTA
+Email: rohit.gupta@example.com | Phone: +1 (555) 019-2834
+LinkedIn: https://linkedin.com/in/rohit-raj-gupta | GitHub: https://github.com/rohit-gupta
+
+SUMMARY
+Results-driven Senior Software Engineer with 5+ years of experience specializing in distributed systems,
+high-throughput cloud APIs, and autonomous AI agents. Track record of improving system latency by 40%
+and scaling microservices to handle millions of daily requests.
+
+KEY SKILLS
+- Languages: Python, Go, TypeScript, SQL
+- Frameworks & Tools: FastAPI, Docker, Kubernetes, Kafka, Redis, PostgreSQL, AWS, GCP
+- AI & LLM Engineering: LangChain, OpenAI API, Retrieval-Augmented Generation (RAG), Agentic Workflows
+
+EXPERIENCE
+Senior Software Engineer | CloudScale Inc. (2022 - Present)
+- Designed and maintained high-concurrency event ingestion pipeline using Python and Kafka processing 50M+ events/day.
+- Reduced API latency by 35% through Redis caching and query optimization in PostgreSQL.
+- Mentored 4 junior engineers and led code reviews across backend microservices.
+
+Software Engineer | NextGen Tech (2020 - 2022)
+- Built customer-facing RESTful and GraphQL APIs using Python and Docker on AWS ECS.
+- Automated CI/CD release pipelines reducing deployment failures by 60%.
+
+EDUCATION
+B.S. in Computer Science | State University (2016 - 2020)

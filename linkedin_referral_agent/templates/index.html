@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Referral & Outreach AI Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .terminal-scroll::-webkit-scrollbar { width: 6px; }
+    .terminal-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col">
+
+  <!-- TOP NAVBAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-md">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <i class="fa-solid fa-paper-plane text-white text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg text-white leading-tight">ReferralAI Studio</h1>
+        <p class="text-xs text-slate-400">LinkedIn Discovery & AI Pitching Agent</p>
+      </div>
+    </div>
+
+    <!-- Mode Badge & Quick Controls -->
+    <div class="flex items-center space-x-4">
+      <div id="modeBadge" class="px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-2 bg-emerald-950 text-emerald-400 border border-emerald-800">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="modeText">DRY-RUN MODE (Safe Outbox)</span>
+      </div>
+      <div class="flex items-center space-x-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
+        <button onclick="switchTab('monitor')" id="tabBtn-monitor" class="px-3 py-1.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow">
+          <i class="fa-solid fa-satellite-dish mr-1.5"></i> Live Monitor
+        </button>
+        <button onclick="switchTab('drafts')" id="tabBtn-drafts" class="px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-envelope-open-text mr-1.5"></i> Drafts (<span id="draftCount">0</span>)
+        </button>
+        <button onclick="switchTab('outbox')" id="tabBtn-outbox" class="px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-box-archive mr-1.5"></i> Outbox History
+        </button>
+        <button onclick="switchTab('settings')" id="tabBtn-settings" class="px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-gear mr-1.5"></i> Settings
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6">
+
+    <!-- TAB 1: LIVE MONITOR & AGENT CONTROL -->
+    <section id="tab-monitor" class="space-y-6">
+      
+      <!-- Metrics Ribbon -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Jobs Scraped</div>
+            <div id="statJobs" class="text-2xl font-bold text-white mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-blue-950 text-blue-400 flex items-center justify-center border border-blue-800">
+            <i class="fa-solid fa-briefcase"></i>
+          </div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Contacts Sourced</div>
+            <div id="statContacts" class="text-2xl font-bold text-white mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center border border-indigo-800">
+            <i class="fa-solid fa-users"></i>
+          </div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-slate-400 font-medium">AI Pitches Crafted</div>
+            <div id="statDrafts" class="text-2xl font-bold text-white mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-purple-950 text-purple-400 flex items-center justify-center border border-purple-800">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-slate-400 font-medium">Emails Dispatched</div>
+            <div id="statSent" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-emerald-950 text-emerald-400 flex items-center justify-center border border-emerald-800">
+            <i class="fa-solid fa-check-double"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Action Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column: Search & Pipeline Configuration -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="font-semibold text-base text-white flex items-center">
+              <i class="fa-brands fa-linkedin text-blue-500 mr-2 text-lg"></i> Search Criteria
+            </h2>
+            <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">LinkedIn Public Live</span>
+          </div>
+
+          <form id="searchForm" onsubmit="startPipeline(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Target Job Title / Role</label>
+              <input type="text" id="inputRole" value="AI Engineer" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition" required>
+            </div>
+
+            <!-- Region with India Presets -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Region / Location</label>
+                <span class="text-[11px] text-blue-400 font-medium">🇮🇳 Target Region</span>
+              </div>
+              <input type="text" id="inputLocation" value="India" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition" required>
+              
+              <!-- Quick Select Buttons -->
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <button type="button" onclick="setLocation('India')" class="text-[10px] bg-blue-950 text-blue-300 border border-blue-800 hover:bg-blue-900 px-2 py-0.5 rounded-full transition">🇮🇳 Anywhere in India</button>
+                <button type="button" onclick="setLocation('Bengaluru, Karnataka, India')" class="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 px-2 py-0.5 rounded-full transition">Bengaluru</button>
+                <button type="button" onclick="setLocation('Hyderabad, Telangana, India')" class="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 px-2 py-0.5 rounded-full transition">Hyderabad</button>
+                <button type="button" onclick="setLocation('Pune, Maharashtra, India')" class="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 px-2 py-0.5 rounded-full transition">Pune</button>
+                <button type="button" onclick="setLocation('Delhi NCR, India')" class="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 px-2 py-0.5 rounded-full transition">Delhi NCR</button>
+                <button type="button" onclick="setLocation('Remote, India')" class="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 px-2 py-0.5 rounded-full transition">Remote</button>
+              </div>
+            </div>
+
+            <!-- Target Company Filter (Top 200 Tech Companies) -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                <i class="fa-solid fa-building-user text-indigo-400 mr-1"></i> Target Company (Top 200 Tech Filter)
+              </label>
+              <select id="inputCompany" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                <option value="" selected>All Companies (Any LinkedIn Job)</option>
+              </select>
+            </div>
+
+            <!-- Target Contact Position / Role Filter -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                <i class="fa-solid fa-user-gear text-emerald-400 mr-1"></i> Target Contact Position / Role
+              </label>
+              <select id="inputTargetPosition" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                <option value="recruiter" selected>Recruiter / HR ("Talent Acquisition" OR "Recruiter" OR "HR")</option>
+                <option value="engineering_manager">Engineering Manager / Tech Lead</option>
+                <option value="technical_sourcer">Technical Sourcer / Staffing Specialist</option>
+                <option value="ai_lead">AI / ML Lead / Head of AI</option>
+                <option value="executive">Director / VP of Tech / CTO</option>
+                <option value="any">All / Any Role (Recruiter, HR, Manager, Lead)</option>
+              </select>
+            </div>
+
+            <!-- Date of Upload Filter -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                <i class="fa-regular fa-calendar-days text-amber-400 mr-1"></i> Date of Upload / Posting
+              </label>
+              <select id="inputDateFilter" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+                <option value="r86400">Past 24 Hours (Fresh Postings)</option>
+                <option value="r604800" selected>Past Week (Recommended)</option>
+                <option value="r2592000">Past Month</option>
+                <option value="any">Any Time</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Max Jobs</label>
+                <input type="number" id="inputMaxJobs" min="1" value="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Contacts per Job</label>
+                <input type="number" id="inputContactsPerJob" min="1" value="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+              </div>
+            </div>
+
+            <button type="submit" id="runBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 transition">
+              <i class="fa-solid fa-play text-sm"></i>
+              <span>Launch Discovery & AI Agent</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Right Column: Live Progress & Terminal Monitor -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-3">
+              <h2 class="font-semibold text-base text-white flex items-center">
+                <i class="fa-solid fa-terminal text-emerald-400 mr-2"></i> Live Agent Monitor
+              </h2>
+              <span id="agentStatusBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400">Idle</span>
+            </div>
+            <button onclick="clearLogs()" class="text-xs text-slate-400 hover:text-white transition">
+              <i class="fa-solid fa-broom mr-1"></i> Clear Log
+            </button>
+          </div>
+
+          <!-- Progress Stepper -->
+          <div class="bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-2">
+            <div class="flex justify-between text-xs text-slate-400 font-medium">
+              <span id="currentStageText">Standby</span>
+              <span id="currentPctText">0%</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+              <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Streaming Terminal -->
+          <div class="flex-1 bg-black/80 rounded-xl p-4 font-mono text-xs overflow-y-auto max-h-96 min-h-64 border border-slate-800 terminal-scroll space-y-1.5" id="terminalLogs">
+            <div class="text-slate-500">[System Ready] Agent ready. Region set to India. Select your preferred date filter and press Launch.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: DRAFTS FOR REVIEW -->
+    <section id="tab-drafts" class="space-y-6 hidden">
+      <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div>
+          <h2 class="text-base font-semibold text-white">Generated Referral Outreach Drafts</h2>
+          <p class="text-xs text-slate-400">Review, customize the recipient's name & email, and approve pitches before sending.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button onclick="approveAllDrafts()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Approve & Send All</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Draft Cards Container -->
+      <div id="draftCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="col-span-full py-16 text-center text-slate-500">
+          <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+          <p class="text-sm">No drafts generated yet. Launch a search from the Live Monitor tab to create drafts.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: OUTBOX HISTORY -->
+    <section id="tab-outbox" class="space-y-6 hidden">
+      <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div>
+          <h2 class="text-base font-semibold text-white">Outbox & Transmission History</h2>
+          <p class="text-xs text-slate-400">All generated drafts, `.eml` MIME records, and attached resumes.</p>
+        </div>
+        <button onclick="fetchOutbox()" class="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 transition">
+          <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh
+        </button>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+            <tr>
+              <th class="px-4 py-3">Timestamp</th>
+              <th class="px-4 py-3">Recipient</th>
+              <th class="px-4 py-3">Company & Job</th>
+              <th class="px-4 py-3">Subject</th>
+              <th class="px-4 py-3">Attachment</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="outboxTableBody" class="divide-y divide-slate-800 text-slate-300">
+            <tr>
+              <td colspan="6" class="px-4 py-8 text-center text-slate-500">Loading outbox records...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: SETTINGS -->
+    <section id="tab-settings" class="space-y-6 hidden">
+      <div class="max-w-4xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-lg font-bold text-white">Application Settings & Credentials</h2>
+          <p class="text-xs text-slate-400">Configure email delivery, real employee enrichment APIs (Apollo / Hunter), and AI keys.</p>
+        </div>
+
+        <form id="settingsForm" onsubmit="saveSettings(event)" class="space-y-6">
+          
+          <!-- Dispatch Mode -->
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Safe Dry-Run Mode</h3>
+                <p class="text-xs text-slate-400">When enabled, drafts are saved to `./outbox/` with zero risk of sending live email.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="settingDryRun" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- B2B Real Employee Enrichment API -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-slate-200 border-b border-slate-800 pb-2 flex items-center justify-between">
+              <span><i class="fa-solid fa-database text-amber-400 mr-1.5"></i> Real Employee Enrichment APIs (Finds Real People & Verified Emails)</span>
+              <span class="text-[11px] text-emerald-400 font-normal">Free Tiers Available</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Apollo.io API Key (Free at apollo.io)</label>
+                <input type="password" id="settingApolloKey" placeholder="Paste Apollo API Key here" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                <p class="text-[10px] text-slate-500 mt-1">Directly retrieves real Talent Acquisition & HR employee profiles and emails.</p>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Hunter.io API Key (Free at hunter.io)</label>
+                <input type="password" id="settingHunterKey" placeholder="Paste Hunter API Key here" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                <p class="text-[10px] text-slate-500 mt-1">Domain email pattern finder and public business directory.</p>
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs text-slate-400 mb-1">Serper.dev API Key (Free Google Search OSINT)</label>
+                <input type="password" id="settingSerperKey" placeholder="Paste Serper API Key here" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+                <p class="text-[10px] text-slate-500 mt-1">Required to trick Google and programmatically scrape real Recruiter/HR LinkedIn profiles.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SMTP Settings -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-slate-200 border-b border-slate-800 pb-2">
+              <i class="fa-solid fa-envelope text-blue-400 mr-1.5"></i> SMTP Email Configuration (Gmail / Outlook)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">SMTP Host</label>
+                <input type="text" id="settingSmtpHost" value="smtp.gmail.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">SMTP Port</label>
+                <input type="number" id="settingSmtpPort" value="587" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Sender Email / SMTP User</label>
+                <input type="email" id="settingSmtpUser" placeholder="your_email@gmail.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Google App Password (16-chars)</label>
+                <input type="password" id="settingSmtpPassword" placeholder="••••••••••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Provider Settings -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-slate-200 border-b border-slate-800 pb-2">
+              <i class="fa-solid fa-brain text-purple-400 mr-1.5"></i> AI Pitch Model (OpenAI / Gemini / Ollama)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">API Key (OpenAI or Gemini API Key)</label>
+                <input type="password" id="settingAiKey" placeholder="sk-..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">AI Model</label>
+                <input type="text" id="settingAiModel" value="gpt-4o-mini" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- Candidate Profile -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-slate-200 border-b border-slate-800 pb-2">
+              <i class="fa-solid fa-user-tie text-emerald-400 mr-1.5"></i> Candidate Profile
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Your Full Name</label>
+                <input type="text" id="settingCandidateName" value="Rohit Raj Gupta" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Resume File Path</label>
+                <input type="text" id="settingResumePath" value="sample_data/sample_resume.txt" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 flex justify-end">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-blue-600/30 transition">
+              Save Settings
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JAVASCRIPT CONTROLLER -->
+  <script>
+    let draftsStore = [];
+    let eventSource = null;
+
+    function setLocation(loc) {
+      document.getElementById('inputLocation').value = loc;
+    }
+
+    // TAB SWITCHER
+    function switchTab(tabId) {
+      const tabs = ['monitor', 'drafts', 'outbox', 'settings'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tabBtn-${t}`);
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+      activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+      activeBtn.classList.remove('text-slate-400');
+
+      if (tabId === 'outbox') fetchOutbox();
+      if (tabId === 'settings') fetchSettings();
+    }
+
+    // LOGGING
+    function appendLog(level, msg) {
+      const container = document.getElementById('terminalLogs');
+      const time = new Date().toLocaleTimeString();
+      let colorClass = "text-slate-300";
+      if (level === "ERROR") colorClass = "text-red-400 font-bold";
+      if (level === "WARNING") colorClass = "text-yellow-400";
+      if (level === "SUCCESS") colorClass = "text-emerald-400 font-bold";
+
+      const line = document.createElement('div');
+      line.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('terminalLogs').innerHTML = '';
+    }
+
+    // CONNECT SSE FOR REAL-TIME MONITORING
+    function initEventStream() {
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource('/api/pipeline/events');
+
+      eventSource.addEventListener('log', (e) => {
+        const data = JSON.parse(e.data);
+        appendLog(data.level, data.message);
+      });
+
+      eventSource.addEventListener('progress', (e) => {
+        const data = JSON.parse(e.data);
+        document.getElementById('currentStageText').innerText = data.stage;
+        document.getElementById('currentPctText').innerText = `${data.percent}%`;
+        document.getElementById('progressBar').style.width = `${data.percent}%`;
+      });
+
+      eventSource.addEventListener('status', (e) => {
+        const data = JSON.parse(e.data);
+        const badge = document.getElementById('agentStatusBadge');
+        badge.innerText = data.status;
+        if (data.status === "RUNNING") {
+          badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-400 border border-blue-800 animate-pulse";
+          document.getElementById('runBtn').disabled = true;
+          document.getElementById('runBtn').classList.add('opacity-50');
+        } else {
+          badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400";
+          document.getElementById('runBtn').disabled = false;
+          document.getElementById('runBtn').classList.remove('opacity-50');
+        }
+      });
+
+      eventSource.addEventListener('draft', (e) => {
+        fetchDrafts();
+      });
+    }
+
+    // PIPELINE LAUNCH
+    async function startPipeline(e) {
+      e.preventDefault();
+      const role = document.getElementById('inputRole').value;
+      const location = document.getElementById('inputLocation').value;
+      const company = document.getElementById('inputCompany').value;
+      const targetPosition = document.getElementById('inputTargetPosition').value;
+      const dateFilter = document.getElementById('inputDateFilter').value;
+      const maxJobs = parseInt(document.getElementById('inputMaxJobs').value, 10);
+      const contactsPerJob = parseInt(document.getElementById('inputContactsPerJob').value, 10);
+
+      const coLog = company ? ` at "${company}"` : '';
+      appendLog('INFO', `Triggering parallelized LinkedIn search for "${role}"${coLog} in "${location}" (Position Filter: ${targetPosition})...`);
+
+      try {
+        const res = await fetch('/api/pipeline/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            role: role,
+            location: location,
+            company: company,
+            target_position: targetPosition,
+            date_filter: dateFilter,
+            max_jobs: maxJobs,
+            contacts_per_job: contactsPerJob
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          appendLog('INFO', 'Agent started successfully in parallel execution mode.');
+        } else {
+          appendLog('ERROR', `Failed to start agent: ${data.detail || 'Unknown error'}`);
+        }
+      } catch (err) {
+        appendLog('ERROR', `Network error launching agent: ${err.message}`);
+      }
+    }
+
+    // FETCH DRAFTS
+    async function fetchDrafts() {
+      try {
+        const res = await fetch('/api/drafts');
+        draftsStore = await res.json();
+        renderDraftCards(draftsStore);
+
+        document.getElementById('draftCount').innerText = draftsStore.length;
+        document.getElementById('statDrafts').innerText = draftsStore.length;
+        const uniqueJobs = new Set(draftsStore.map(d => d.job.job_id)).size;
+        document.getElementById('statJobs').innerText = uniqueJobs;
+        document.getElementById('statContacts').innerText = draftsStore.length;
+        const sentCount = draftsStore.filter(d => d.status === 'SENT').length;
+        document.getElementById('statSent').innerText = sentCount;
+      } catch (err) {
+        console.error('Error fetching drafts:', err);
+      }
+    }
+
+    // RENDER DRAFTS
+    function renderDraftCards(drafts) {
+      const container = document.getElementById('draftCardsGrid');
+      if (!drafts || drafts.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-16 text-center text-slate-500">
+            <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+            <p class="text-sm">No drafts generated yet. Launch a search from the Live Monitor tab to create drafts.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = drafts.map((draft, idx) => {
+        const isRecruiter = draft.recipient.role_category === "recruiter";
+        const badgeColor = isRecruiter ? "bg-cyan-950 text-cyan-400 border-cyan-800" : "bg-purple-950 text-purple-400 border-purple-800";
+        const roleLabel = isRecruiter ? "RECRUITER" : "HIRING MANAGER";
+        const statusBadge = draft.status === 'SENT' ? 
+          `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">SENT</span>` : 
+          `<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-950 text-yellow-400 border border-yellow-800">DRAFT</span>`;
+
+        const postedDateStr = draft.job.posted_date || "Recently";
+        const postedIsoStr = draft.job.posted_datetime ? ` (${draft.job.posted_datetime})` : '';
+
+        // Verification Badge
+        let verifBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950/80 text-amber-300 border border-amber-800" title="Domain pattern placeholder. Click 'View Team on LinkedIn' to pick a real employee."><i class="fa-solid fa-triangle-exclamation mr-1"></i> Domain Guess</span>`;
+        if (draft.recipient.verification_source === 'API_VERIFIED') {
+          verifBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800"><i class="fa-solid fa-check mr-1"></i> Apollo/Hunter Verified</span>`;
+        } else if (draft.recipient.verification_source === 'SERPER_OSINT') {
+          verifBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-indigo-950 text-indigo-400 border border-indigo-800"><i class="fa-solid fa-magnifying-glass mr-1"></i> Google OSINT</span>`;
+        } else if (draft.recipient.verification_source === 'MANUAL') {
+          verifBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-800"><i class="fa-solid fa-user-check mr-1"></i> Custom Verified</span>`;
+        }
+
+        const linkedinSearchUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(draft.job.company_name)}%20${isRecruiter ? 'Talent%20Acquisition' : 'Engineering%20Manager'}`;
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between shadow-lg">
+            
+            <!-- Card Header -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs px-2.5 py-0.5 rounded-full border font-semibold ${badgeColor}">${roleLabel}</span>
+                  ${verifBadge}
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700 flex items-center">
+                    <i class="fa-regular fa-clock mr-1 text-amber-400"></i> ${escapeHtml(postedDateStr)}${escapeHtml(postedIsoStr)}
+                  </span>
+                  ${statusBadge}
+                </div>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between">
+                  <h3 class="text-base font-bold text-white">${draft.job.company_name}</h3>
+                  <span class="text-[11px] text-slate-400 flex items-center">
+                    <i class="fa-solid fa-location-dot text-red-400 mr-1"></i> ${draft.job.location}
+                  </span>
+                </div>
+                <a href="${draft.job.job_url}" target="_blank" class="text-xs text-blue-400 hover:underline flex items-center mt-0.5">
+                  ${draft.job.title} <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+                </a>
+              </div>
+            </div>
+
+            <!-- Target Recruiter / Manager Section (Editable & LinkedIn Helper) -->
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] text-slate-400 font-semibold uppercase flex items-center">
+                  <i class="fa-solid fa-user-tag text-blue-400 mr-1.5"></i> Target Contact
+                </label>
+                <div class="flex space-x-2">
+                  ${draft.recipient.linkedin_url ? `
+                    <a href="${draft.recipient.linkedin_url}" target="_blank" class="text-[10px] bg-indigo-950 hover:bg-indigo-900 text-indigo-300 px-2.5 py-1 rounded-md border border-indigo-800 transition flex items-center shadow-sm" title="View Scraped Profile">
+                      <i class="fa-solid fa-user-astronaut mr-1"></i> Open Profile <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[8px]"></i>
+                    </a>` : ''}
+                  <a href="${linkedinSearchUrl}" target="_blank" class="text-[10px] bg-blue-950 hover:bg-blue-900 text-blue-300 px-2.5 py-1 rounded-md border border-blue-800 transition flex items-center shadow-sm">
+                    <i class="fa-brands fa-linkedin mr-1 text-blue-400"></i> View Team <i class="fa-solid fa-arrow-up-right-from-square ml-1.5 text-[8px]"></i>
+                  </a>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] text-slate-500">First Name</label>
+                  <input type="text" id="fname-${idx}" value="${escapeHtml(draft.recipient.first_name)}" placeholder="e.g. Priya" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-500">Last Name</label>
+                  <input type="text" id="lname-${idx}" value="${escapeHtml(draft.recipient.last_name)}" placeholder="e.g. Sharma" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <label class="block text-[10px] text-slate-500">Work Email</label>
+                    <button type="button" onclick="probeEmailCandidate(${idx})" class="text-[9px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center">
+                      <i class="fa-solid fa-satellite-dish mr-1"></i> Verify Address
+                    </button>
+                  </div>
+                  <input type="email" id="email-${idx}" value="${escapeHtml(draft.recipient.email)}" placeholder="work.email@domain.com" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
+                  <div id="probe-status-${idx}" class="mt-0.5 text-[9px] text-slate-400"></div>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-500">Role Title</label>
+                  <input type="text" id="role-${idx}" value="${escapeHtml(draft.recipient.role_title)}" placeholder="e.g. Talent Acquisition Partner" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-blue-500 focus:outline-none">
+                </div>
+              </div>
+
+              <!-- Email Candidate Pattern Permutations Dropdown -->
+              <div>
+                <label class="block text-[10px] text-slate-400 font-medium mb-1">
+                  <i class="fa-solid fa-network-wired text-indigo-400 mr-1"></i> Candidate Email Permutations (Select Pattern):
+                </label>
+                <select id="permutations-${idx}" onchange="document.getElementById('email-${idx}').value = this.value; probeEmailCandidate(${idx});" class="w-full bg-slate-900 border border-indigo-900/60 rounded px-2 py-1 text-[11px] text-indigo-200 focus:border-indigo-500 focus:outline-none">
+                  ${(draft.recipient.email_candidates || [draft.recipient.email]).map(c => `
+                    <option value="${escapeHtml(c)}" ${c === draft.recipient.email ? 'selected' : ''}>${escapeHtml(c)}</option>
+                  `).join('')}
+                </select>
+              </div>
+
+              <div class="pt-1 flex justify-end">
+                <button type="button" onclick="regeneratePitch(${idx})" class="text-[10px] text-purple-400 hover:text-purple-300 flex items-center transition">
+                  <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Re-craft pitch for this person
+                </button>
+              </div>
+            </div>
+
+            <!-- Subject & Body (Editable) -->
+            <div class="space-y-3">
+              <div>
+                <label class="block text-[11px] text-slate-400 font-semibold uppercase mb-1">Subject</label>
+                <input type="text" id="subject-${idx}" value="${escapeHtml(draft.subject)}" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-[11px] text-slate-400 font-semibold uppercase mb-1">Pitch Body</label>
+                <textarea id="body-${idx}" rows="5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-blue-500 focus:outline-none leading-relaxed">${escapeHtml(draft.body)}</textarea>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+              <button onclick="saveDraftEdits(${idx})" class="text-xs text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Save Changes
+              </button>
+              <div class="flex space-x-2">
+                <button onclick="skipDraft(${idx})" class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white transition">
+                  Skip
+                </button>
+                <button onclick="sendSingleDraft(${idx})" class="px-4 py-1.5 rounded-lg text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition flex items-center space-x-1">
+                  <i class="fa-solid fa-paper-plane text-[11px]"></i>
+                  <span>${draft.status === 'SENT' ? 'Resend' : 'Approve & Send'}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    async function saveDraftEdits(idx) {
+      const subject = document.getElementById(`subject-${idx}`).value;
+      const body = document.getElementById(`body-${idx}`).value;
+      const fname = document.getElementById(`fname-${idx}`).value;
+      const lname = document.getElementById(`lname-${idx}`).value;
+      const email = document.getElementById(`email-${idx}`).value;
+      const role = document.getElementById(`role-${idx}`).value;
+
+      try {
+        await fetch(`/api/drafts/${idx}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject,
+            body,
+            first_name: fname,
+            last_name: lname,
+            email: email,
+            role_title: role
+          })
+        });
+        appendLog('INFO', `Saved changes for draft ${idx + 1} (${fname} ${lname}).`);
+        fetchDrafts();
+      } catch (err) {
+        appendLog('ERROR', `Error updating draft: ${err.message}`);
+      }
+    }
+
+    async function regeneratePitch(idx) {
+      await saveDraftEdits(idx);
+      try {
+        appendLog('INFO', `Re-crafting AI pitch for draft ${idx + 1}...`);
+        const res = await fetch(`/api/drafts/${idx}/regenerate`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          appendLog('SUCCESS', `Re-crafted pitch with updated greeting!`);
+          fetchDrafts();
+        }
+      } catch (err) {
+        appendLog('ERROR', `Error regenerating pitch: ${err.message}`);
+      }
+    }
+
+    async function probeEmailCandidate(idx) {
+      const email = document.getElementById(`email-${idx}`).value;
+      const statusEl = document.getElementById(`probe-status-${idx}`);
+      if (!email) return;
+
+      statusEl.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Probing MX & SMTP envelope...</span>`;
+      appendLog('INFO', `Probing email pattern candidate: ${email}...`);
+
+      try {
+        const res = await fetch('/api/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        statusEl.innerHTML = `<span>${data.message}</span>`;
+      } catch (err) {
+        statusEl.innerHTML = `<span class="text-red-400">Probe failed: ${err.message}</span>`;
+      }
+    }
+
+    async function sendSingleDraft(idx) {
+      const subject = document.getElementById(`subject-${idx}`).value;
+      const body = document.getElementById(`body-${idx}`).value;
+      const fname = document.getElementById(`fname-${idx}`).value;
+      const lname = document.getElementById(`lname-${idx}`).value;
+      const email = document.getElementById(`email-${idx}`).value;
+
+      try {
+        appendLog('INFO', `Dispatching draft ${idx + 1}...`);
+        const res = await fetch(`/api/drafts/${idx}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject,
+            body,
+            first_name: fname,
+            last_name: lname,
+            email: email
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          appendLog('SUCCESS', `Dispatched to ${data.destination} for ${data.recipient}!`);
+          fetchDrafts();
+        } else {
+          appendLog('ERROR', `Dispatch failed: ${data.detail}`);
+        }
+      } catch (err) {
+        appendLog('ERROR', `Error sending draft: ${err.message}`);
+      }
+    }
+
+    async function approveAllDrafts() {
+      try {
+        appendLog('INFO', 'Dispatching all pending drafts...');
+        const res = await fetch('/api/drafts/send-all', { method: 'POST' });
+        const data = await res.json();
+        appendLog('SUCCESS', `Finished sending: ${data.sent} sent, ${data.failed} failed.`);
+        fetchDrafts();
+      } catch (err) {
+        appendLog('ERROR', `Error in batch send: ${err.message}`);
+      }
+    }
+
+    async function skipDraft(idx) {
+      try {
+        await fetch(`/api/drafts/${idx}/skip`, { method: 'POST' });
+        fetchDrafts();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // OUTBOX VIEWER
+    async function fetchOutbox() {
+      const tbody = document.getElementById('outboxTableBody');
+      try {
+        const res = await fetch('/api/outbox');
+        const items = await res.json();
+        if (!items || items.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No outbox files recorded yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = items.map(item => `
+          <tr class="hover:bg-slate-800/50 transition">
+            <td class="px-4 py-3 text-slate-400">${item.saved_at ? new Date(item.saved_at).toLocaleString() : 'Recently'}</td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-white">${item.recipient_name || 'Contact'}</div>
+              <div class="text-[11px] text-slate-400">${item.to}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-slate-200">${item.company}</div>
+              <div class="text-[11px] text-slate-400">${item.job_title}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-300 max-w-xs truncate">${item.subject}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center text-[11px] text-emerald-400">
+                <i class="fa-solid fa-paperclip mr-1"></i> Attached
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">.EML / JSON</span>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-400">Error loading outbox.</td></tr>`;
+      }
+    }
+
+    // SETTINGS
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        document.getElementById('settingDryRun').checked = data.DRY_RUN;
+        document.getElementById('settingSmtpHost').value = data.SMTP_HOST || "";
+        document.getElementById('settingSmtpPort').value = data.SMTP_PORT || 587;
+        document.getElementById('settingSmtpUser').value = data.SMTP_USER || "";
+        document.getElementById('settingAiModel').value = data.AI_MODEL || "gpt-4o-mini";
+        document.getElementById('settingCandidateName').value = data.SENDER_NAME || "";
+        document.getElementById('settingResumePath').value = data.DEFAULT_RESUME_PATH || "";
+        document.getElementById('settingAiKey').value = data.OPENAI_API_KEY || "";
+        document.getElementById('settingApolloKey').value = data.APOLLO_API_KEY || "";
+        document.getElementById('settingHunterKey').value = data.HUNTER_API_KEY || "";
+        document.getElementById('settingSerperKey').value = data.SERPER_API_KEY || "";
+        document.getElementById('settingSmtpPassword').value = data.SMTP_PASSWORD || "";
+
+        updateModeBadge(data.DRY_RUN);
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
+    }
+
+    function updateModeBadge(isDryRun) {
+      const badge = document.getElementById('modeBadge');
+      const text = document.getElementById('modeText');
+      if (isDryRun) {
+        badge.className = "px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-2 bg-emerald-950 text-emerald-400 border border-emerald-800";
+        text.innerText = "DRY-RUN MODE (Safe Outbox)";
+      } else {
+        badge.className = "px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-2 bg-amber-950 text-amber-400 border border-amber-800";
+        text.innerText = "LIVE SMTP MODE";
+      }
+    }
+
+    async function saveSettings(e) {
+      e.preventDefault();
+      const payload = {
+        DRY_RUN: document.getElementById('settingDryRun').checked,
+        SMTP_HOST: document.getElementById('settingSmtpHost').value,
+        SMTP_PORT: parseInt(document.getElementById('settingSmtpPort').value, 10),
+        SMTP_USER: document.getElementById('settingSmtpUser').value,
+        SMTP_PASSWORD: document.getElementById('settingSmtpPassword').value,
+        OPENAI_API_KEY: document.getElementById('settingAiKey').value,
+        APOLLO_API_KEY: document.getElementById('settingApolloKey').value,
+        HUNTER_API_KEY: document.getElementById('settingHunterKey').value,
+        SERPER_API_KEY: document.getElementById('settingSerperKey').value,
+        AI_MODEL: document.getElementById('settingAiModel').value,
+        SENDER_NAME: document.getElementById('settingCandidateName').value,
+        DEFAULT_RESUME_PATH: document.getElementById('settingResumePath').value
+      };
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          appendLog('SUCCESS', 'Settings updated successfully.');
+          updateModeBadge(payload.DRY_RUN);
+          alert('Settings saved successfully!');
+        } else {
+          alert('Failed to save settings.');
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    async function fetchCompanies() {
+      try {
+        const res = await fetch('/api/companies');
+        const data = await res.json();
+        const select = document.getElementById('inputCompany');
+        if (data.companies && data.companies.length) {
+          data.companies.forEach(co => {
+            const opt = document.createElement('option');
+            opt.value = co;
+            opt.innerText = co;
+            select.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching top 200 tech companies:', err);
+      }
+    }
+
+    // INITIALIZE ON LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      initEventStream();
+      fetchSettings();
+      fetchCompanies();
+      fetchDrafts();
+    });
+  </script>
+</body>
+</html>

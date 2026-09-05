@@ -1,0 +1,8 @@
+.env
+.DS_Store
+outbox/
+test_*.py
+ui.png
+*.log
+__pycache__/
+.pytest_cache/

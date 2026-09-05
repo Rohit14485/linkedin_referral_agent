@@ -78,10 +78,14 @@ class JobFinder:
             if live_jobs:
                 logger.info(f"Successfully scraped {len(live_jobs)} live jobs from LinkedIn for '{keywords}' in {normalized_loc}.")
                 return live_jobs
-            logger.warning("No live jobs extracted; using query-relevant seed fallback.")
+            logger.warning("No live jobs extracted from LinkedIn guest API; switching to seed catalog fallback.")
             return self._get_fallback_jobs(keywords, normalized_loc, limit)
         except Exception as e:
-            logger.warning(f"Error querying LinkedIn public jobs: {e}. Using seed fallback.")
+            err_type = type(e).__name__
+            if "NameResolutionError" in str(e) or "ConnectionError" in err_type:
+                logger.warning(f"🌐 DNS resolution temporarily unavailable for www.linkedin.com ({err_type}). Switched to backup seed job catalog.")
+            else:
+                logger.warning(f"LinkedIn public jobs query note: {e}. Switched to seed catalog.")
             return self._get_fallback_jobs(keywords, normalized_loc, limit)
 
     def _scrape_linkedin_guest(

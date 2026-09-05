@@ -239,6 +239,31 @@
         </div>
       </div>
 
+      <!-- Batch Progress Card & Live Progress Bar -->
+      <div id="batchProgressCard" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl transition-all mb-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div id="batchProgressIconBg" class="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-800 flex items-center justify-center">
+              <i id="batchProgressIcon" class="fa-solid fa-paper-plane text-emerald-400 text-sm"></i>
+            </div>
+            <div>
+              <h4 id="batchProgressTitle" class="text-xs font-bold text-white uppercase tracking-wider">Sending Batch Outreach Emails...</h4>
+              <p id="batchProgressSub" class="text-[11px] text-slate-400">Processing drafts with live status updates</p>
+            </div>
+          </div>
+          <span id="batchProgressPercent" class="text-sm font-black font-mono text-emerald-400">0%</span>
+        </div>
+
+        <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-slate-800 p-0.5">
+          <div id="batchProgressBar" class="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-300 shadow-sm" style="width: 0%"></div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60">
+          <span id="batchProgressText" class="text-slate-300 font-medium">Initializing batch send...</span>
+          <span id="batchProgressCounts" class="font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">0 sent / 0 failed</span>
+        </div>
+      </div>
+
       <!-- Draft Cards Container -->
       <div id="draftCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="col-span-full py-16 text-center text-slate-500">
@@ -559,9 +584,15 @@
         const isRecruiter = draft.recipient.role_category === "recruiter";
         const badgeColor = isRecruiter ? "bg-cyan-950 text-cyan-400 border-cyan-800" : "bg-purple-950 text-purple-400 border-purple-800";
         const roleLabel = isRecruiter ? "RECRUITER" : "HIRING MANAGER";
-        const statusBadge = draft.status === 'SENT' ? 
-          `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">SENT</span>` : 
-          `<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-950 text-yellow-400 border border-yellow-800">DRAFT</span>`;
+
+        let statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-950 text-yellow-400 border border-yellow-800 flex items-center"><i class="fa-regular fa-clock mr-1"></i> DRAFT</span>`;
+        if (draft.status === 'SENT') {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center font-bold"><i class="fa-solid fa-circle-check mr-1 text-emerald-400"></i> SENT</span>`;
+        } else if (draft.status === 'FAILED') {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-red-950 text-red-400 border border-red-800 flex items-center font-bold animate-pulse"><i class="fa-solid fa-circle-xmark mr-1 text-red-400"></i> FAILED</span>`;
+        } else if (draft.status === 'SKIPPED') {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700 flex items-center"><i class="fa-solid fa-forward mr-1"></i> SKIPPED</span>`;
+        }
 
         const postedDateStr = draft.job.posted_date || "Recently";
         const postedIsoStr = draft.job.posted_datetime ? ` (${draft.job.posted_datetime})` : '';
@@ -577,6 +608,23 @@
         }
 
         const linkedinSearchUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(draft.job.company_name)}%20${isRecruiter ? 'Talent%20Acquisition' : 'Engineering%20Manager'}`;
+
+        const statusBanner = (draft.status === 'FAILED' || draft.error_message) ? `
+          <div class="bg-red-950/80 border border-red-800/80 rounded-xl p-3 text-xs text-red-300 space-y-1 shadow-inner">
+            <div class="font-semibold flex items-center text-red-400">
+              <i class="fa-solid fa-triangle-exclamation mr-1.5 text-sm"></i> Email Dispatch Failed
+            </div>
+            <div class="text-[11px] text-red-200/90 font-mono">${escapeHtml(draft.error_message || "SMTP authentication failed or credentials missing. Check Settings tab.")}</div>
+          </div>
+        ` : (draft.status === 'SENT' ? `
+          <div class="bg-emerald-950/60 border border-emerald-800/60 rounded-xl p-2.5 text-xs text-emerald-300 flex items-center justify-between shadow-inner">
+            <div class="flex items-center space-x-1.5">
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              <span class="font-medium text-[11px]">Dispatched to ${escapeHtml(draft.recipient.email)}</span>
+            </div>
+            <span class="text-[10px] text-emerald-400/80 font-mono">${draft.sent_at ? new Date(draft.sent_at).toLocaleTimeString() : 'Sent'}</span>
+          </div>
+        ` : '');
 
         return `
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between shadow-lg">
@@ -608,6 +656,8 @@
                 </a>
               </div>
             </div>
+
+            ${statusBanner}
 
             <!-- Target Recruiter / Manager Section (Editable & LinkedIn Helper) -->
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 space-y-2">
@@ -695,9 +745,9 @@
                 <button onclick="skipDraft(${idx})" class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-400 hover:text-white transition">
                   Skip
                 </button>
-                <button onclick="sendSingleDraft(${idx})" class="px-4 py-1.5 rounded-lg text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-md shadow-blue-600/30 transition flex items-center space-x-1">
+                <button onclick="sendSingleDraft(${idx})" class="px-4 py-1.5 rounded-lg text-xs ${draft.status === 'FAILED' ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-medium shadow-md transition flex items-center space-x-1">
                   <i class="fa-solid fa-paper-plane text-[11px]"></i>
-                  <span>${draft.status === 'SENT' ? 'Resend' : 'Approve & Send'}</span>
+                  <span>${draft.status === 'SENT' ? 'Resend' : (draft.status === 'FAILED' ? 'Retry Send' : 'Approve & Send')}</span>
                 </button>
               </div>
             </div>
@@ -819,11 +869,33 @@
       const origHtml = btn ? btn.innerHTML : '';
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending All...`;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Dispatching Batch...`;
       }
 
+      // Show Progress Card Banner
+      const pCard = document.getElementById('batchProgressCard');
+      const pTitle = document.getElementById('batchProgressTitle');
+      const pSub = document.getElementById('batchProgressSub');
+      const pBar = document.getElementById('batchProgressBar');
+      const pPercent = document.getElementById('batchProgressPercent');
+      const pText = document.getElementById('batchProgressText');
+      const pCounts = document.getElementById('batchProgressCounts');
+      const pIcon = document.getElementById('batchProgressIcon');
+
+      pCard.classList.remove('hidden');
+      pIcon.className = "fa-solid fa-paper-plane text-emerald-400 text-sm animate-bounce";
+      pTitle.innerText = `Dispatching ${draftsStore.length} Outreach Pitch(es)...`;
+      pSub.innerText = "Transmitting live emails / outbox records draft-by-draft";
+      pBar.style.width = "0%";
+      pPercent.innerText = "0%";
+      pText.innerText = "Saving draft modifications...";
+      pCounts.innerText = `0 sent / 0 failed`;
+
+      let sentCount = 0;
+      let failedCount = 0;
+
       try {
-        // Save form modifications from draft cards before send-all
+        // Step 1: Save draft modifications from card inputs first
         for (let idx = 0; idx < draftsStore.length; idx++) {
           const subjectEl = document.getElementById(`subject-${idx}`);
           const bodyEl = document.getElementById(`body-${idx}`);
@@ -846,18 +918,70 @@
           }
         }
 
-        appendLog('INFO', `Dispatching all ${draftsStore.length} draft(s)...`);
-        const res = await fetch('/api/drafts/send-all', { method: 'POST' });
-        const data = await res.json();
+        // Step 2: Send draft by draft with live progress bar updates
+        for (let idx = 0; idx < draftsStore.length; idx++) {
+          const draft = draftsStore[idx];
+          if (draft.status === 'SKIPPED') {
+            appendLog('WARNING', `Skipping draft #${idx + 1} for ${draft.recipient.email} (Status: SKIPPED)`);
+            continue;
+          }
 
-        if (res.ok) {
-          appendLog('SUCCESS', `Finished batch sending: ${data.sent} sent, ${data.failed} failed.`);
-        } else {
-          appendLog('ERROR', `Batch send failed: ${data.detail || 'Server error'}`);
+          const targetEmail = document.getElementById(`email-${idx}`)?.value || draft.recipient.email;
+          const targetName = draft.recipient.first_name || "Contact";
+
+          pText.innerHTML = `<span class="text-blue-400 font-semibold">Draft #${idx + 1}/${draftsStore.length}:</span> Dispatching pitch to ${escapeHtml(targetName)} &lt;${escapeHtml(targetEmail)}&gt;...`;
+          appendLog('INFO', `Sending draft #${idx + 1}/${draftsStore.length} to ${targetEmail}...`);
+
+          try {
+            const subject = document.getElementById(`subject-${idx}`)?.value || draft.subject;
+            const body = document.getElementById(`body-${idx}`)?.value || draft.body;
+            const fname = document.getElementById(`fname-${idx}`)?.value || draft.recipient.first_name;
+            const lname = document.getElementById(`lname-${idx}`)?.value || draft.recipient.last_name;
+
+            const res = await fetch(`/api/drafts/${idx}/send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                subject, body, first_name: fname, last_name: lname, email: targetEmail
+              })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+              sentCount++;
+              appendLog('SUCCESS', `🟢 Approved & Sent #${idx + 1}: ${targetEmail} (${data.destination})`);
+            } else {
+              failedCount++;
+              appendLog('ERROR', `🔴 Send Failed #${idx + 1}: ${targetEmail} - ${data.detail || 'Send failed'}`);
+            }
+          } catch (err) {
+            failedCount++;
+            appendLog('ERROR', `🔴 Network Error #${idx + 1}: ${err.message}`);
+          }
+
+          // Update Progress Bar
+          const percent = Math.round(((idx + 1) / draftsStore.length) * 100);
+          pBar.style.width = `${percent}%`;
+          pPercent.innerText = `${percent}%`;
+          pCounts.innerText = `${sentCount} sent / ${failedCount} failed`;
+
+          // Refresh drafts list so status badges and card banners update live
+          await fetchDrafts();
         }
-        await fetchDrafts();
+
+        // Finish Progress Banner
+        pIcon.className = failedCount === 0 ? "fa-solid fa-circle-check text-emerald-400 text-sm" : "fa-solid fa-triangle-exclamation text-amber-400 text-sm";
+        pTitle.innerText = failedCount === 0 ? "🎉 Batch Outreach Completed Successfully!" : "⚠️ Batch Outreach Completed with Issues";
+        pSub.innerText = `Final Result: ${sentCount} sent, ${failedCount} failed.`;
+        pText.innerHTML = failedCount === 0 ? 
+          `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> All ${sentCount} outreach emails sent cleanly!</span>` : 
+          `<span class="text-amber-400 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${sentCount} sent, ${failedCount} failed. Check error banners on cards below.</span>`;
+
+        appendLog('SUCCESS', `🎉 Batch dispatch finished: ${sentCount} sent, ${failedCount} failed out of ${draftsStore.length} total.`);
+
       } catch (err) {
-        appendLog('ERROR', `Error in batch send: ${err.message}`);
+        appendLog('ERROR', `Error during batch dispatch: ${err.message}`);
+        pText.innerHTML = `<span class="text-red-400 font-bold">Error: ${escapeHtml(err.message)}</span>`;
       } finally {
         if (btn) {
           btn.disabled = false;

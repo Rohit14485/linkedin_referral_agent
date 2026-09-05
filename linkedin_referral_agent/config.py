@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     SENDER_EMAIL: str = ""
 
     # Candidate defaults
-    DEFAULT_RESUME_PATH: str = "sample_data/sample_resume.txt"
+    DEFAULT_RESUME_PATH: str = "sample_data/Rohit_Raj_Gupta_resume-1.pdf"
 
     # AI Provider Settings (OpenAI / Gemini / Ollama compatible)
     OPENAI_API_KEY: Optional[str] = None

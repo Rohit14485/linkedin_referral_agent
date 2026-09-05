@@ -86,8 +86,8 @@ class SettingsUpdateRequest(BaseModel):
     HUNTER_API_KEY: Optional[str] = None
     SERPER_API_KEY: Optional[str] = None
     AI_MODEL: str = "gpt-4o-mini"
-    SENDER_NAME: str = "Job Applicant"
-    DEFAULT_RESUME_PATH: str = "sample_data/sample_resume.txt"
+    SENDER_NAME: str = "Rohit Raj Gupta"
+    DEFAULT_RESUME_PATH: str = "sample_data/Rohit_Raj_Gupta_resume-1.pdf"
 
 
 async def broadcast_event(event_type: str, data: Dict[str, Any]):

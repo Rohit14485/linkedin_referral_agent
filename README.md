@@ -50,7 +50,7 @@ python3 -m linkedin_referral_agent.cli --role "Platform Engineer" --auto-approve
 
 Custom Resume & Count:
 ```bash
-python3 -m linkedin_referral_agent.cli --role "Machine Learning" --resume "sample_data/sample_resume.txt" --max-jobs 3 --contacts-per-job 2
+python3 -m linkedin_referral_agent.cli --role "Machine Learning" --resume "sample_data/Rohit_Raj_Gupta_resume-1.pdf" --max-jobs 3 --contacts-per-job 2
 ```
 
 ---

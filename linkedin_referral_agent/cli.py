@@ -209,7 +209,7 @@ def main():
     parser.add_argument("--location", type=str, default="Remote", help="Location filter")
     parser.add_argument("--max-jobs", type=int, default=3, help="Maximum jobs to inspect")
     parser.add_argument("--contacts-per-job", type=int, default=2, help="Contacts per job (HR / Manager)")
-    parser.add_argument("--resume", type=str, default="sample_data/sample_resume.txt", help="Path to resume")
+    parser.add_argument("--resume", type=str, default="sample_data/Rohit_Raj_Gupta_resume-1.pdf", help="Path to resume")
     parser.add_argument("--dry-run", action="store_true", default=True, help="Force dry-run outbox mode")
     parser.add_argument("--live", action="store_true", help="Enable live SMTP dispatch")
     parser.add_argument("--auto-approve", action="store_true", help="Auto approve drafts without prompt")

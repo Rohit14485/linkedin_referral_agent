@@ -102,7 +102,7 @@ class ContactFinder:
         candidates = contact.email_candidates or [contact.email]
 
         try:
-            output = subprocess.check_output(["host", "-t", "MX", domain], text=True)
+            output = subprocess.check_output(["host", "-t", "MX", domain], text=True, timeout=2)
             lines = output.strip().split("\n")
             mx_host = None
             for line in lines:
